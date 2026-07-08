@@ -74,12 +74,22 @@
       margin: 0 0 12px;
       font-size: 16px;
       font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
     }
     .card h2 .hint {
       font-size: 12px;
       color: var(--muted);
       font-weight: 400;
       margin-left: 8px;
+    }
+    .card h2 .header-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex: none;
     }
 
     /* Upload */
@@ -112,6 +122,7 @@
       transition: background .15s, border-color .15s, color .15s;
     }
     .btn:hover { background: #f3f4f6; }
+    .btn-sm { padding: 6px 12px; font-size: 13px; }
     .btn-primary {
       background: var(--primary);
       color: #fff;
@@ -187,7 +198,123 @@
       color: #fff;
     }
 
+    /* Config card */
+    .config-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+    }
+    .config-item {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .config-item label {
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .config-item input[type="text"],
+    .config-item input[type="number"] {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      background: #fff;
+      color: var(--text);
+      width: 100%;
+    }
+    .config-item input:focus { outline: 2px solid var(--primary-soft); border-color: var(--primary); }
+    .config-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+    .config-row input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+    .config-row span { color: var(--text); }
+    .config-hint {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* Column settings popup */
+    .col-settings {
+      position: relative;
+      display: inline-block;
+    }
+    .col-settings-panel {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 8px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      min-width: 240px;
+      box-shadow: 0 10px 25px rgba(0,0,0,.1);
+      z-index: 100;
+      display: none;
+    }
+    .col-settings-panel.open { display: block; }
+    .col-settings-panel h3 {
+      margin: 0 0 8px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .col-list {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 10px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .col-list li {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      cursor: move;
+      user-select: none;
+      font-size: 13px;
+    }
+    .col-list li:hover { background: #f3f4f6; }
+    .col-list li.dragging { opacity: 0.5; }
+    .col-list li.drag-over { background: var(--primary-soft); }
+    .col-list li .drag-handle {
+      color: var(--muted);
+      cursor: move;
+      font-size: 14px;
+    }
+    .col-list li input[type="checkbox"] {
+      cursor: pointer;
+      width: 15px;
+      height: 15px;
+    }
+    .col-list li .col-name {
+      flex: 1;
+    }
+    .col-settings-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+
     /* Table */
+    .table-header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
     .table-wrap {
       overflow-x: auto;
       border: 1px solid var(--border);
@@ -230,7 +357,7 @@
     }
     .text-wrap textarea {
       width: 100%;
-      min-height: 110px;
+      min-height: 130px;
       padding: 12px 14px;
       padding-bottom: 48px;
       border: 1px solid var(--border);
@@ -279,9 +406,34 @@
       </label>
     </section>
 
+    <!-- Config -->
+    <section class="card" id="configCard" style="display:none;">
+      <h2>2. 配置 <span class="hint">自动保存到本地浏览器，下次打开自动加载</span></h2>
+      <div class="config-grid">
+        <div class="config-item">
+          <label for="deptNameInput">部门名称（用于文案前缀）</label>
+          <input id="deptNameInput" type="text" placeholder="如：四组" value="四组" />
+          <div class="config-hint">例：你好，这是<strong>四组</strong>七月份报工情况：...</div>
+        </div>
+        <div class="config-item">
+          <label>
+            <div class="config-row">
+              <input type="checkbox" id="enableStaleFilter" />
+              <span>启用「最近打卡时间超 X 天」过滤</span>
+            </div>
+          </label>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <input id="staleDaysInput" type="number" min="1" max="365" value="15" style="width:80px; padding:6px 10px; border:1px solid var(--border); border-radius:8px;" />
+            <span style="font-size:13px; color:var(--muted);">天，超过则隐藏该人员</span>
+          </div>
+          <div class="config-hint">对比「最近打卡时间」与「查询日期」，超过阈值的人员不参与文案生成</div>
+        </div>
+      </div>
+    </section>
+
     <!-- Filter -->
     <section class="card" id="filterCard" style="display:none;">
-      <h2>2. 筛选 &amp; 生成类型</h2>
+      <h2>3. 筛选 &amp; 生成类型</h2>
       <div class="filter-row">
         <div class="filter-group" style="flex: 1 1 320px;">
           <label for="leaderSelect">直属领导（按住 Ctrl/Cmd 多选，默认全选）</label>
@@ -304,18 +456,24 @@
 
     <!-- Table -->
     <section class="card" id="tableCard" style="display:none;">
-      <h2>3. 数据预览 <span class="hint" id="rowCountHint"></span></h2>
+      <div class="table-header-bar">
+        <h2 style="margin:0;">4. 数据预览 <span class="hint" id="rowCountHint"></span></h2>
+        <div class="col-settings">
+          <button class="btn btn-sm" id="colSettingsBtn" type="button">列设置</button>
+          <div class="col-settings-panel" id="colSettingsPanel">
+            <h3>显示/隐藏 &amp; 拖拽排序列</h3>
+            <ul class="col-list" id="colList"></ul>
+            <div class="col-settings-actions">
+              <button class="btn btn-sm" id="resetColsBtn" type="button">恢复默认</button>
+              <button class="btn btn-sm btn-primary" id="closeColsBtn" type="button">完成</button>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="table-wrap">
         <table class="data-table" id="dataTable">
           <thead>
-            <tr>
-              <th>序号</th>
-              <th>本人/本部门</th>
-              <th>直属领导</th>
-              <th>当月报工(件数)</th>
-              <th>当天报工(件数)</th>
-              <th>查询日期</th>
-            </tr>
+            <tr id="tableHeadRow"></tr>
           </thead>
           <tbody></tbody>
         </table>
@@ -324,7 +482,7 @@
 
     <!-- Text output -->
     <section class="card" id="outputCard" style="display:none;">
-      <h2>4. 生成文案 <span class="hint" id="outputHint"></span></h2>
+      <h2>5. 生成文案 <span class="hint" id="outputHint"></span></h2>
       <div class="text-wrap">
         <textarea id="outputText" readonly placeholder="筛选数据后此处会显示生成的文案"></textarea>
         <div class="copy-btn-wrap">
@@ -339,6 +497,7 @@
     'use strict';
 
     // ===== Constants =====
+    var STORAGE_KEY = 'workReportExcelConfig_v1';
     var NAME_FIELD_ALIASES = ['本人/本部门', '姓名/本部门'];
     var REQUIRED_FIELDS = [
       '本人/本部门',
@@ -347,27 +506,36 @@
       '当天报工(件数)',
       '查询日期'
     ];
-    var DISPLAY_FIELDS = [
-      '本人/本部门',
-      '直属领导',
-      '当月报工(件数)',
-      '当天报工(件数)',
-      '查询日期'
+    var DEFAULT_COLUMNS = [
+      { key: '序号', label: '序号', visible: true, required: true },
+      { key: '本人/本部门', label: '本人/本部门', visible: true, required: true },
+      { key: '直属领导', label: '直属领导', visible: true, required: true },
+      { key: '当月报工(件数)', label: '当月报工(件数)', visible: true, required: false },
+      { key: '当天报工(件数)', label: '当天报工(件数)', visible: true, required: false },
+      { key: '查询日期', label: '查询日期', visible: true, required: false },
+      { key: '最近打卡时间', label: '最近打卡时间', visible: false, required: false }
     ];
 
     // ===== State =====
     var state = {
-      rawRows: [],          // Array of row objects keyed by header
-      displayRows: [],      // Filtered rows
-      leaders: [],          // Distinct leader list
-      selectedLeaders: [],  // Currently selected leaders
-      type: 'monthly'       // 'monthly' or 'today'
+      rawRows: [],
+      displayRows: [],
+      leaders: [],
+      selectedLeaders: [],
+      type: 'monthly',
+      columns: JSON.parse(JSON.stringify(DEFAULT_COLUMNS)),
+      config: {
+        deptName: '四组',
+        enableStaleFilter: false,
+        staleDays: 15
+      }
     };
 
     // ===== DOM =====
     var elFileInput   = document.getElementById('fileInput');
     var elUploadArea  = document.getElementById('uploadArea');
     var elStatusBar   = document.getElementById('statusBar');
+    var elConfigCard  = document.getElementById('configCard');
     var elFilterCard  = document.getElementById('filterCard');
     var elTableCard   = document.getElementById('tableCard');
     var elOutputCard  = document.getElementById('outputCard');
@@ -378,10 +546,74 @@
     var elDateHint    = document.getElementById('dateHint');
     var elDataTable   = document.getElementById('dataTable');
     var elTbody       = elDataTable.querySelector('tbody');
+    var elTheadRow    = document.getElementById('tableHeadRow');
     var elRowCount    = document.getElementById('rowCountHint');
     var elOutputText  = document.getElementById('outputText');
     var elCopyBtn     = document.getElementById('copyBtn');
     var elOutputHint  = document.getElementById('outputHint');
+    var elDeptName    = document.getElementById('deptNameInput');
+    var elStaleEnable = document.getElementById('enableStaleFilter');
+    var elStaleDays   = document.getElementById('staleDaysInput');
+    var elColSettingsBtn = document.getElementById('colSettingsBtn');
+    var elColSettingsPanel = document.getElementById('colSettingsPanel');
+    var elColList = document.getElementById('colList');
+    var elResetColsBtn = document.getElementById('resetColsBtn');
+    var elCloseColsBtn = document.getElementById('closeColsBtn');
+
+    // ===== Storage =====
+    function loadConfig() {
+      try {
+        var raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        var obj = JSON.parse(raw);
+        if (obj.config && typeof obj.config === 'object') {
+          if (typeof obj.config.deptName === 'string') state.config.deptName = obj.config.deptName;
+          if (typeof obj.config.enableStaleFilter === 'boolean') state.config.enableStaleFilter = obj.config.enableStaleFilter;
+          if (typeof obj.config.staleDays === 'number') state.config.staleDays = obj.config.staleDays;
+        }
+        if (Array.isArray(obj.columns)) {
+          var newCols = [];
+          obj.columns.forEach(function (c) {
+            var existing = state.columns.find(function (d) { return d.key === c.key; });
+            if (existing) {
+              newCols.push({
+                key: existing.key,
+                label: existing.label,
+                visible: typeof c.visible === 'boolean' ? c.visible : existing.visible,
+                required: existing.required
+              });
+            }
+          });
+          if (newCols.length) {
+            DEFAULT_COLUMNS.forEach(function (c) {
+              if (!newCols.find(function (n) { return n.key === c.key; })) {
+                newCols.push(JSON.parse(JSON.stringify(c)));
+              }
+            });
+            state.columns = newCols;
+          }
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    function saveConfig() {
+      try {
+        var data = {
+          config: state.config,
+          columns: state.columns.map(function (c) {
+            return { key: c.key, visible: c.visible };
+          })
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      } catch (e) { /* ignore */ }
+    }
+
+    function syncConfigUI() {
+      elDeptName.value = state.config.deptName;
+      elStaleEnable.checked = state.config.enableStaleFilter;
+      elStaleDays.value = state.config.staleDays;
+      elStaleDays.disabled = !state.config.enableStaleFilter;
+    }
 
     // ===== Utilities =====
     function setStatus(msg, level) {
@@ -404,20 +636,17 @@
     function parseDate(str) {
       if (!str) return null;
       var s = String(str).trim();
-      // Match YYYY-MM-DD or YYYY/MM/DD
       var m = s.match(/^(\d{4})[\-\/](\d{1,2})[\-\/](\d{1,2})/);
       if (m) {
         var y = parseInt(m[1], 10);
         var mo = parseInt(m[2], 10);
         var d = parseInt(m[3], 10);
         if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31) {
-          return { year: y, month: mo, day: d, raw: s };
+          return { year: y, month: mo, day: d, raw: s, ts: new Date(y, mo - 1, d).getTime() };
         }
       }
-      // Try Excel serial number
       var n = Number(s);
       if (!isNaN(n) && n > 25569) {
-        // Excel epoch: 1900-01-01, but accounting for 1900 leap year bug
         var ms = (n - 25569) * 86400 * 1000;
         var dt = new Date(ms);
         if (!isNaN(dt.getTime())) {
@@ -425,18 +654,19 @@
             year: dt.getUTCFullYear(),
             month: dt.getUTCMonth() + 1,
             day: dt.getUTCDate(),
-            raw: s
+            raw: s,
+            ts: dt.getTime()
           };
         }
       }
-      // Try Date.parse
       var dt2 = new Date(s);
       if (!isNaN(dt2.getTime())) {
         return {
           year: dt2.getFullYear(),
           month: dt2.getMonth() + 1,
           day: dt2.getDate(),
-          raw: s
+          raw: s,
+          ts: dt2.getTime()
         };
       }
       return null;
@@ -448,6 +678,15 @@
         if (d) return d;
       }
       return null;
+    }
+
+    function isStale(row) {
+      if (!state.config.enableStaleFilter) return false;
+      var queryD = parseDate(row['查询日期']);
+      var punchD = parseDate(row['最近打卡时间']);
+      if (!queryD || !punchD) return false;
+      var diffDays = (queryD.ts - punchD.ts) / (1000 * 60 * 60 * 24);
+      return diffDays > state.config.staleDays;
     }
 
     // ===== Excel parsing =====
@@ -475,7 +714,6 @@
             setStatus('Excel 中没有数据行', 'warn');
             return;
           }
-          // Validate required headers
           var sample = rows[0];
           var headers = Object.keys(sample);
           var nameField = NAME_FIELD_ALIASES.find(function (alias) { return headers.indexOf(alias) !== -1; });
@@ -489,20 +727,25 @@
             setStatus('Excel 缺少必要列：' + missing.join('、') + '。请检查表头后重新上传。', 'danger');
             return;
           }
-          // Clean rows: keep only required+display fields, map name alias to standard field
           var cleaned = rows.map(function (r) {
             var obj = {};
             obj['本人/本部门'] = (r[nameField] === undefined || r[nameField] === null) ? '' : r[nameField];
-            DISPLAY_FIELDS.forEach(function (f) {
-              if (f === '本人/本部门') return;
-              var v = r[f];
-              obj[f] = (v === undefined || v === null) ? '' : v;
+            state.columns.forEach(function (col) {
+              if (col.key === '本人/本部门' || col.key === '序号') return;
+              var v = r[col.key];
+              obj[col.key] = (v === undefined || v === null) ? '' : v;
+            });
+            state.columns.forEach(function (col) {
+              if (col.key === '本人/本部门' || col.key === '序号' || obj.hasOwnProperty(col.key)) return;
+              var v = r[col.key];
+              obj[col.key] = (v === undefined || v === null) ? '' : v;
             });
             return obj;
           });
           state.rawRows = cleaned;
           initLeaders(cleaned);
           setStatus('解析成功：共 ' + cleaned.length + ' 行数据，请选择直属领导并切换生成类型。', 'success');
+          elConfigCard.style.display = '';
           elFilterCard.style.display = '';
           elTableCard.style.display = '';
           elOutputCard.style.display = '';
@@ -527,7 +770,7 @@
       });
       var list = Object.keys(set).sort(function (a, b) { return a.localeCompare(b, 'zh-Hans-CN'); });
       state.leaders = list;
-      state.selectedLeaders = list.slice(); // default: all selected
+      state.selectedLeaders = list.slice();
     }
 
     function renderLeaderOptions() {
@@ -553,36 +796,126 @@
     function applyFilter() {
       var sel = getSelectedLeaders();
       state.selectedLeaders = sel;
-      state.displayRows = state.rawRows.filter(function (r) {
+      var filtered = state.rawRows.filter(function (r) {
         var l = safeText(r['直属领导']);
         return sel.indexOf(l) !== -1;
       });
+      if (state.config.enableStaleFilter) {
+        filtered = filtered.filter(function (r) { return !isStale(r); });
+      }
+      state.displayRows = filtered;
       renderTable();
       generateOutput();
     }
 
+    // ===== Table rendering =====
     function renderTable() {
+      elTheadRow.innerHTML = '';
+      var visibleCols = state.columns.filter(function (c) { return c.visible; });
+      visibleCols.forEach(function (col) {
+        var th = document.createElement('th');
+        th.textContent = col.label;
+        elTheadRow.appendChild(th);
+      });
+
       elTbody.innerHTML = '';
       var frag = document.createDocumentFragment();
       state.displayRows.forEach(function (r, i) {
         var tr = document.createElement('tr');
-        var cells = [
-          String(i + 1),
-          safeText(r['本人/本部门']),
-          safeText(r['直属领导']),
-          r['当月报工(件数)'] === '' ? '' : safeText(r['当月报工(件数)']),
-          r['当天报工(件数)'] === '' ? '' : safeText(r['当天报工(件数)']),
-          safeText(r['查询日期'])
-        ];
-        cells.forEach(function (c) {
+        visibleCols.forEach(function (col) {
           var td = document.createElement('td');
-          td.textContent = c;
+          if (col.key === '序号') {
+            td.textContent = String(i + 1);
+          } else {
+            var v = r[col.key];
+            td.textContent = (v === undefined || v === null) ? '' : safeText(v);
+          }
           tr.appendChild(td);
         });
         frag.appendChild(tr);
       });
       elTbody.appendChild(frag);
-      elRowCount.textContent = '共 ' + state.displayRows.length + ' / ' + state.rawRows.length + ' 行';
+
+      var staleCount = state.config.enableStaleFilter
+        ? (state.rawRows.filter(function (r) { return isStale(r); }).length)
+        : 0;
+      var totalFiltered = state.displayRows.length;
+      var countText = '共 ' + totalFiltered + ' / ' + state.rawRows.length + ' 行';
+      if (staleCount > 0) countText += '（已过滤 ' + staleCount + ' 条超 ' + state.config.staleDays + ' 天未打卡人员）';
+      elRowCount.textContent = countText;
+    }
+
+    // ===== Column settings =====
+    function renderColList() {
+      elColList.innerHTML = '';
+      state.columns.forEach(function (col, idx) {
+        var li = document.createElement('li');
+        li.draggable = !col.required ? true : true;
+        li.dataset.key = col.key;
+        li.dataset.index = String(idx);
+
+        var handle = document.createElement('span');
+        handle.className = 'drag-handle';
+        handle.textContent = '☰';
+        li.appendChild(handle);
+
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = col.visible;
+        cb.disabled = !!col.required;
+        cb.dataset.key = col.key;
+        li.appendChild(cb);
+
+        var name = document.createElement('span');
+        name.className = 'col-name';
+        name.textContent = col.label + (col.required ? '（必显）' : '');
+        li.appendChild(name);
+
+        li.addEventListener('dragstart', function (e) {
+          li.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', col.key);
+        });
+        li.addEventListener('dragend', function () {
+          li.classList.remove('dragging');
+          var items = elColList.querySelectorAll('li');
+          items.forEach(function (it) { it.classList.remove('drag-over'); });
+        });
+        li.addEventListener('dragover', function (e) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          li.classList.add('drag-over');
+        });
+        li.addEventListener('dragleave', function () {
+          li.classList.remove('drag-over');
+        });
+        li.addEventListener('drop', function (e) {
+          e.preventDefault();
+          li.classList.remove('drag-over');
+          var draggedKey = e.dataTransfer.getData('text/plain');
+          var targetKey = col.key;
+          if (draggedKey === targetKey) return;
+          var fromIdx = state.columns.findIndex(function (c) { return c.key === draggedKey; });
+          var toIdx = state.columns.findIndex(function (c) { return c.key === targetKey; });
+          if (fromIdx === -1 || toIdx === -1) return;
+          var moved = state.columns.splice(fromIdx, 1)[0];
+          state.columns.splice(toIdx, 0, moved);
+          saveConfig();
+          renderColList();
+          renderTable();
+        });
+
+        cb.addEventListener('change', function () {
+          var found = state.columns.find(function (c) { return c.key === col.key; });
+          if (found && !found.required) {
+            found.visible = cb.checked;
+            saveConfig();
+            renderTable();
+          }
+        });
+
+        elColList.appendChild(li);
+      });
     }
 
     // ===== Output generation =====
@@ -619,6 +952,7 @@
         var now = new Date();
         monthLabel = (now.getMonth() + 1) + '月份';
       }
+      var dept = safeText(state.config.deptName) || '四组';
       var rows = state.displayRows;
       var zeroList = [];
       var reportList = [];
@@ -632,21 +966,17 @@
           reportList.push(name + '已报工' + n + '次');
         }
       });
-      var head = monthLabel + '报工情况: ';
-      var text = '';
+      var prefix = '你好，这是' + dept + monthLabel + '报工情况：';
+      var body = '';
       if (zeroList.length === 0) {
-        // All > 0
-        text = head + reportList.join(', ') + '。';
-        return { text: text, hint: '已生成「' + monthLabel + '报工情况」' };
+        body = reportList.join(', ') + '。';
       } else if (reportList.length === 0) {
-        // All 0
-        text = head + zeroList.join('、') + '当月未报工，麻烦提醒一下。';
-        return { text: text, hint: '已生成「' + monthLabel + '报工情况」' };
+        body = zeroList.join('、') + '当月未报工，麻烦提醒一下。';
       } else {
-        // Mixed
-        text = head + zeroList.join('、') + '当月未报工，麻烦提醒一下; ' + reportList.join(', ') + '。';
-        return { text: text, hint: '已生成「' + monthLabel + '报工情况」' };
+        body = zeroList.join('、') + '当月未报工，麻烦提醒一下; ' + reportList.join(', ') + '。';
       }
+      var text = prefix + body;
+      return { text: text, hint: '已生成「' + dept + '」' + monthLabel + '报工情况' };
     }
 
     function buildTodayText() {
@@ -658,6 +988,7 @@
         var now = new Date();
         dateLabel = (now.getMonth() + 1) + '月' + now.getDate() + '日';
       }
+      var dept = safeText(state.config.deptName) || '四组';
       var rows = state.displayRows;
       var zeroList = [];
       rows.forEach(function (r) {
@@ -672,9 +1003,9 @@
           hint: '当前筛选下无人今日未报工'
         };
       }
-      var head = dateLabel + '报工情况: ';
-      var text = head + zeroList.join('、') + '今日未报工，麻烦提醒一下。';
-      return { text: text, hint: '已生成「' + dateLabel + '未报工提醒」' };
+      var prefix = '你好，这是' + dept + dateLabel + '报工情况：';
+      var text = prefix + zeroList.join('、') + '今日未报工，麻烦提醒一下。';
+      return { text: text, hint: '已生成「' + dept + '」' + dateLabel + '未报工提醒' };
     }
 
     function updateDateHint() {
@@ -717,7 +1048,7 @@
 
     function flashCopyButton(ok) {
       elCopyBtn.textContent = ok ? '已复制' : '复制失败，请手动复制';
-      elCopyBtn.disabled = !ok ? false : true; // keep enabled if failed
+      elCopyBtn.disabled = !ok ? false : true;
       setTimeout(function () {
         elCopyBtn.textContent = '一键复制';
         elCopyBtn.disabled = !elOutputText.value;
@@ -789,6 +1120,51 @@
         }
       });
     });
+
+    // Config events
+    elDeptName.addEventListener('input', function () {
+      state.config.deptName = elDeptName.value;
+      saveConfig();
+      generateOutput();
+    });
+    elStaleEnable.addEventListener('change', function () {
+      state.config.enableStaleFilter = elStaleEnable.checked;
+      elStaleDays.disabled = !state.config.enableStaleFilter;
+      saveConfig();
+      if (state.rawRows.length) applyFilter();
+    });
+    elStaleDays.addEventListener('input', function () {
+      var n = parseInt(elStaleDays.value, 10);
+      if (isNaN(n) || n < 1) n = 15;
+      state.config.staleDays = n;
+      saveConfig();
+      if (state.rawRows.length && state.config.enableStaleFilter) applyFilter();
+    });
+
+    // Column settings events
+    elColSettingsBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      renderColList();
+      elColSettingsPanel.classList.toggle('open');
+    });
+    elCloseColsBtn.addEventListener('click', function () {
+      elColSettingsPanel.classList.remove('open');
+    });
+    elResetColsBtn.addEventListener('click', function () {
+      state.columns = JSON.parse(JSON.stringify(DEFAULT_COLUMNS));
+      saveConfig();
+      renderColList();
+      renderTable();
+    });
+    document.addEventListener('click', function (e) {
+      if (!elColSettingsPanel.classList.contains('open')) return;
+      if (elColSettingsPanel.contains(e.target) || e.target === elColSettingsBtn) return;
+      elColSettingsPanel.classList.remove('open');
+    });
+
+    // ===== Init =====
+    loadConfig();
+    syncConfigUI();
   })();
   </script>
 </body>
