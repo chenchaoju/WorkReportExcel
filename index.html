@@ -6,6 +6,8 @@
   <title>纯前端 Excel 报工文案生成器</title>
   <!-- SheetJS via CDN -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- html2canvas for screenshot -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <style>
     :root {
       --primary: #2563eb;
@@ -486,6 +488,7 @@
       <div class="text-wrap">
         <textarea id="outputText" readonly placeholder="筛选数据后此处会显示生成的文案"></textarea>
         <div class="copy-btn-wrap">
+          <button class="btn" id="screenshotBtn" type="button" disabled>复制截图</button>
           <button class="btn btn-primary" id="copyBtn" type="button" disabled>一键复制</button>
         </div>
       </div>
@@ -550,6 +553,7 @@
     var elRowCount    = document.getElementById('rowCountHint');
     var elOutputText  = document.getElementById('outputText');
     var elCopyBtn     = document.getElementById('copyBtn');
+    var elScreenshotBtn = document.getElementById('screenshotBtn');
     var elOutputHint  = document.getElementById('outputHint');
     var elDeptName    = document.getElementById('deptNameInput');
     var elStaleEnable = document.getElementById('enableStaleFilter');
@@ -924,6 +928,7 @@
       if (!state.displayRows.length) {
         elOutputText.value = '';
         elCopyBtn.disabled = true;
+        elScreenshotBtn.disabled = true;
         elOutputHint.textContent = '当前筛选下没有数据。';
         updateDateHint();
         return;
@@ -933,11 +938,13 @@
         var monthly = buildMonthlyText();
         elOutputText.value = monthly.text;
         elCopyBtn.disabled = !monthly.text;
+        elScreenshotBtn.disabled = false;
         elOutputHint.textContent = monthly.hint || '';
       } else {
         var today = buildTodayText();
         elOutputText.value = today.text;
         elCopyBtn.disabled = !today.text;
+        elScreenshotBtn.disabled = false;
         elOutputHint.textContent = today.hint || '';
       }
       updateDateHint();
@@ -1055,6 +1062,59 @@
       }, 2000);
     }
 
+    // ===== Screenshot =====
+    function screenshotAndCopy() {
+      if (!state.displayRows.length) return;
+      setStatus('正在生成截图…', 'warn');
+      var target = document.getElementById('tableCard');
+      if (!target) return;
+      html2canvas(target, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true
+      }).then(function (canvas) {
+        canvas.toBlob(function (blob) {
+          if (!blob) {
+            setStatus('截图生成失败', 'danger');
+            return;
+          }
+          try {
+            if (navigator.clipboard && navigator.clipboard.write) {
+              var item = new ClipboardItem({ 'image/png': blob });
+              navigator.clipboard.write([item]).then(function () {
+                setStatus('截图已复制到剪贴板', 'success');
+                elScreenshotBtn.textContent = '已复制';
+                setTimeout(function () {
+                  elScreenshotBtn.textContent = '复制截图';
+                }, 2000);
+              }, function () {
+                fallbackDownload(blob);
+              });
+            } else {
+              fallbackDownload(blob);
+            }
+          } catch (e) {
+            fallbackDownload(blob);
+          }
+        }, 'image/png');
+      }).catch(function (err) {
+        console.error(err);
+        setStatus('截图失败：' + (err.message || err), 'danger');
+      });
+    }
+
+    function fallbackDownload(blob) {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = '报工数据截图_' + new Date().toISOString().slice(0,10) + '.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setStatus('截图已下载（浏览器不支持直接复制图片到剪贴板）', 'warn');
+    }
+
     // ===== Event binding =====
     elFileInput.addEventListener('change', function (e) {
       var f = e.target.files && e.target.files[0];
@@ -1119,6 +1179,10 @@
           setStatus('已复制到剪贴板', 'success');
         }
       });
+    });
+
+    elScreenshotBtn.addEventListener('click', function () {
+      screenshotAndCopy();
     });
 
     // Config events
