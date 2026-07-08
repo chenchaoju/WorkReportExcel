@@ -310,7 +310,7 @@
           <thead>
             <tr>
               <th>序号</th>
-              <th>姓名/本部门</th>
+              <th>本人/本部门</th>
               <th>直属领导</th>
               <th>当月报工(件数)</th>
               <th>当天报工(件数)</th>
@@ -339,15 +339,16 @@
     'use strict';
 
     // ===== Constants =====
+    var NAME_FIELD_ALIASES = ['本人/本部门', '姓名/本部门'];
     var REQUIRED_FIELDS = [
-      '姓名/本部门',
+      '本人/本部门',
       '直属领导',
       '当月报工(件数)',
       '当天报工(件数)',
       '查询日期'
     ];
     var DISPLAY_FIELDS = [
-      '姓名/本部门',
+      '本人/本部门',
       '直属领导',
       '当月报工(件数)',
       '当天报工(件数)',
@@ -477,19 +478,26 @@
           // Validate required headers
           var sample = rows[0];
           var headers = Object.keys(sample);
-          var missing = REQUIRED_FIELDS.filter(function (h) { return headers.indexOf(h) === -1; });
+          var nameField = NAME_FIELD_ALIASES.find(function (alias) { return headers.indexOf(alias) !== -1; });
+          if (!nameField) {
+            setStatus('Excel 缺少「姓名/本部门」或「本人/本部门」列。请检查表头后重新上传。', 'danger');
+            return;
+          }
+          var otherRequired = REQUIRED_FIELDS.slice(1);
+          var missing = otherRequired.filter(function (h) { return headers.indexOf(h) === -1; });
           if (missing.length) {
             setStatus('Excel 缺少必要列：' + missing.join('、') + '。请检查表头后重新上传。', 'danger');
             return;
           }
-          // Clean rows: keep only required+display fields, coerce failures to ''
+          // Clean rows: keep only required+display fields, map name alias to standard field
           var cleaned = rows.map(function (r) {
             var obj = {};
+            obj['本人/本部门'] = (r[nameField] === undefined || r[nameField] === null) ? '' : r[nameField];
             DISPLAY_FIELDS.forEach(function (f) {
+              if (f === '本人/本部门') return;
               var v = r[f];
               obj[f] = (v === undefined || v === null) ? '' : v;
             });
-            // Add 序号 from row order
             return obj;
           });
           state.rawRows = cleaned;
@@ -560,7 +568,7 @@
         var tr = document.createElement('tr');
         var cells = [
           String(i + 1),
-          safeText(r['姓名/本部门']),
+          safeText(r['本人/本部门']),
           safeText(r['直属领导']),
           r['当月报工(件数)'] === '' ? '' : safeText(r['当月报工(件数)']),
           r['当天报工(件数)'] === '' ? '' : safeText(r['当天报工(件数)']),
@@ -615,7 +623,7 @@
       var zeroList = [];
       var reportList = [];
       rows.forEach(function (r) {
-        var name = safeText(r['姓名/本部门']);
+        var name = safeText(r['本人/本部门']);
         if (!name) return;
         var n = toNumber(r['当月报工(件数)']);
         if (n === 0) {
@@ -654,7 +662,7 @@
       var zeroList = [];
       rows.forEach(function (r) {
         var n = toNumber(r['当天报工(件数)']);
-        var name = safeText(r['姓名/本部门']);
+        var name = safeText(r['本人/本部门']);
         if (!name) return;
         if (n === 0) zeroList.push(name);
       });
