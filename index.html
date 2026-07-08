@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>纯前端 Excel 报工文案生成器</title>
+  <!-- SheetJS via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --primary-soft: #dbeafe;
+      --bg: #f5f7fa;
+      --border: #e5e7eb;
+      --text: #111827;
+      --muted: #6b7280;
+      --success: #059669;
+      --warn: #d97706;
+      --danger: #dc2626;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 20px 60px;
+    }
+    header.app-header {
+      margin-bottom: 20px;
+    }
+    header.app-header h1 {
+      margin: 0 0 6px;
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    header.app-header p.subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .status-bar {
+      margin: 12px 0 18px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 13px;
+      min-height: 20px;
+      line-height: 1.5;
+    }
+    .status-bar.success { color: var(--success); border-color: #a7f3d0; background: #ecfdf5; }
+    .status-bar.warn    { color: var(--warn);    border-color: #fde68a; background: #fffbeb; }
+    .status-bar.danger  { color: var(--danger);  border-color: #fecaca; background: #fef2f2; }
+
+    .card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+    .card h2 {
+      margin: 0 0 12px;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .card h2 .hint {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 400;
+      margin-left: 8px;
+    }
+
+    /* Upload */
+    .upload-area {
+      border: 2px dashed #cbd5e1;
+      border-radius: 8px;
+      padding: 28px;
+      text-align: center;
+      background: #fafbfc;
+      transition: background .15s, border-color .15s;
+      cursor: pointer;
+    }
+    .upload-area:hover { border-color: var(--primary); }
+    .upload-area.dragover {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+    }
+    .upload-area p { margin: 6px 0; color: var(--muted); font-size: 13px; }
+    .upload-area .primary-text { color: var(--text); font-size: 15px; font-weight: 500; }
+    .upload-area input[type="file"] { display: none; }
+    .btn {
+      display: inline-block;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      color: var(--text);
+      font-size: 14px;
+      cursor: pointer;
+      transition: background .15s, border-color .15s, color .15s;
+    }
+    .btn:hover { background: #f3f4f6; }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      border-color: var(--primary-hover);
+    }
+    .btn-primary:disabled,
+    .btn:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+    .btn-ghost { background: transparent; }
+
+    /* Filter */
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 200px;
+    }
+    .filter-group label {
+      font-size: 13px;
+      color: var(--muted);
+    }
+    select[multiple] {
+      width: 100%;
+      min-height: 110px;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      font-size: 14px;
+      color: var(--text);
+    }
+    select[multiple]:focus { outline: 2px solid var(--primary-soft); border-color: var(--primary); }
+    .filter-buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: 22px;
+      flex-wrap: wrap;
+    }
+    .filter-buttons .btn { padding: 6px 12px; font-size: 13px; }
+
+    /* Type select */
+    .type-tabs {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .type-tabs button {
+      padding: 8px 14px;
+      border: 0;
+      background: transparent;
+      font-size: 14px;
+      cursor: pointer;
+      color: var(--muted);
+      border-right: 1px solid var(--border);
+    }
+    .type-tabs button:last-child { border-right: 0; }
+    .type-tabs button.active {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    /* Table */
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      max-height: 420px;
+      overflow-y: auto;
+    }
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      min-width: 720px;
+    }
+    table.data-table th,
+    table.data-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      white-space: nowrap;
+    }
+    table.data-table th {
+      background: #f9fafb;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      font-weight: 600;
+      color: #374151;
+    }
+    table.data-table tbody tr:nth-child(odd) { background: #fafbfc; }
+    table.data-table tbody tr:hover { background: var(--primary-soft); }
+    .table-meta {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* Text area */
+    .text-wrap {
+      position: relative;
+    }
+    .text-wrap textarea {
+      width: 100%;
+      min-height: 110px;
+      padding: 12px 14px;
+      padding-bottom: 48px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text);
+      background: #fff;
+      resize: vertical;
+      font-family: inherit;
+    }
+    .text-wrap textarea:focus { outline: 2px solid var(--primary-soft); border-color: var(--primary); }
+    .copy-btn-wrap {
+      position: absolute;
+      right: 8px;
+      bottom: 8px;
+    }
+
+    .row { display: flex; flex-wrap: wrap; gap: 16px; }
+    .row > * { flex: 1 1 220px; }
+
+    @media (max-width: 640px) {
+      .container { padding: 16px 12px 40px; }
+      header.app-header h1 { font-size: 20px; }
+      .card { padding: 14px; }
+      .upload-area { padding: 22px 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="app-header">
+      <h1>纯前端 Excel 报工文案生成器</h1>
+      <p class="subtitle">上传 Excel · 筛选直属领导 · 一键生成可复制的报工/提醒文案</p>
+    </header>
+
+    <div id="statusBar" class="status-bar">请先上传一份 Excel 文件（.xlsx / .xls）。</div>
+
+    <!-- Upload -->
+    <section class="card">
+      <h2>1. 上传 Excel <span class="hint">支持 .xlsx / .xls，拖拽或点击均可</span></h2>
+      <label for="fileInput" id="uploadArea" class="upload-area">
+        <p class="primary-text">点击选择文件，或将 Excel 拖到此处</p>
+        <p>仅解析本地文件，不会上传到任何服务器</p>
+        <input id="fileInput" type="file" accept=".xlsx,.xls" />
+      </label>
+    </section>
+
+    <!-- Filter -->
+    <section class="card" id="filterCard" style="display:none;">
+      <h2>2. 筛选 &amp; 生成类型</h2>
+      <div class="filter-row">
+        <div class="filter-group" style="flex: 1 1 320px;">
+          <label for="leaderSelect">直属领导（按住 Ctrl/Cmd 多选，默认全选）</label>
+          <select id="leaderSelect" multiple></select>
+          <div class="filter-buttons">
+            <button class="btn" id="selectAllBtn" type="button">全选</button>
+            <button class="btn" id="clearAllBtn" type="button">清空</button>
+          </div>
+        </div>
+        <div class="filter-group" style="min-width: 240px;">
+          <label>生成类型</label>
+          <div class="type-tabs" id="typeTabs" role="tablist">
+            <button type="button" data-type="monthly" class="active">当月报工情况</button>
+            <button type="button" data-type="today">今日未报工提醒</button>
+          </div>
+          <div class="table-meta" id="dateHint" style="margin-top:8px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Table -->
+    <section class="card" id="tableCard" style="display:none;">
+      <h2>3. 数据预览 <span class="hint" id="rowCountHint"></span></h2>
+      <div class="table-wrap">
+        <table class="data-table" id="dataTable">
+          <thead>
+            <tr>
+              <th>序号</th>
+              <th>姓名/本部门</th>
+              <th>直属领导</th>
+              <th>当月报工(件数)</th>
+              <th>当天报工(件数)</th>
+              <th>查询日期</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Text output -->
+    <section class="card" id="outputCard" style="display:none;">
+      <h2>4. 生成文案 <span class="hint" id="outputHint"></span></h2>
+      <div class="text-wrap">
+        <textarea id="outputText" readonly placeholder="筛选数据后此处会显示生成的文案"></textarea>
+        <div class="copy-btn-wrap">
+          <button class="btn btn-primary" id="copyBtn" type="button" disabled>一键复制</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    // ===== Constants =====
+    var REQUIRED_FIELDS = [
+      '姓名/本部门',
+      '直属领导',
+      '当月报工(件数)',
+      '当天报工(件数)',
+      '查询日期'
+    ];
+    var DISPLAY_FIELDS = [
+      '姓名/本部门',
+      '直属领导',
+      '当月报工(件数)',
+      '当天报工(件数)',
+      '查询日期'
+    ];
+
+    // ===== State =====
+    var state = {
+      rawRows: [],          // Array of row objects keyed by header
+      displayRows: [],      // Filtered rows
+      leaders: [],          // Distinct leader list
+      selectedLeaders: [],  // Currently selected leaders
+      type: 'monthly'       // 'monthly' or 'today'
+    };
+
+    // ===== DOM =====
+    var elFileInput   = document.getElementById('fileInput');
+    var elUploadArea  = document.getElementById('uploadArea');
+    var elStatusBar   = document.getElementById('statusBar');
+    var elFilterCard  = document.getElementById('filterCard');
+    var elTableCard   = document.getElementById('tableCard');
+    var elOutputCard  = document.getElementById('outputCard');
+    var elLeaderSel   = document.getElementById('leaderSelect');
+    var elSelectAll   = document.getElementById('selectAllBtn');
+    var elClearAll    = document.getElementById('clearAllBtn');
+    var elTypeTabs    = document.getElementById('typeTabs');
+    var elDateHint    = document.getElementById('dateHint');
+    var elDataTable   = document.getElementById('dataTable');
+    var elTbody       = elDataTable.querySelector('tbody');
+    var elRowCount    = document.getElementById('rowCountHint');
+    var elOutputText  = document.getElementById('outputText');
+    var elCopyBtn     = document.getElementById('copyBtn');
+    var elOutputHint  = document.getElementById('outputHint');
+
+    // ===== Utilities =====
+    function setStatus(msg, level) {
+      elStatusBar.textContent = msg || '';
+      elStatusBar.className = 'status-bar' + (level ? ' ' + level : '');
+    }
+
+    function safeText(v) {
+      if (v === null || v === undefined) return '';
+      return String(v).trim();
+    }
+
+    function toNumber(v) {
+      if (v === null || v === undefined || v === '') return 0;
+      var n = Number(v);
+      if (isNaN(n)) return 0;
+      return n;
+    }
+
+    function parseDate(str) {
+      if (!str) return null;
+      var s = String(str).trim();
+      // Match YYYY-MM-DD or YYYY/MM/DD
+      var m = s.match(/^(\d{4})[\-\/](\d{1,2})[\-\/](\d{1,2})/);
+      if (m) {
+        var y = parseInt(m[1], 10);
+        var mo = parseInt(m[2], 10);
+        var d = parseInt(m[3], 10);
+        if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31) {
+          return { year: y, month: mo, day: d, raw: s };
+        }
+      }
+      // Try Excel serial number
+      var n = Number(s);
+      if (!isNaN(n) && n > 25569) {
+        // Excel epoch: 1900-01-01, but accounting for 1900 leap year bug
+        var ms = (n - 25569) * 86400 * 1000;
+        var dt = new Date(ms);
+        if (!isNaN(dt.getTime())) {
+          return {
+            year: dt.getUTCFullYear(),
+            month: dt.getUTCMonth() + 1,
+            day: dt.getUTCDate(),
+            raw: s
+          };
+        }
+      }
+      // Try Date.parse
+      var dt2 = new Date(s);
+      if (!isNaN(dt2.getTime())) {
+        return {
+          year: dt2.getFullYear(),
+          month: dt2.getMonth() + 1,
+          day: dt2.getDate(),
+          raw: s
+        };
+      }
+      return null;
+    }
+
+    function getFirstDate() {
+      for (var i = 0; i < state.displayRows.length; i++) {
+        var d = parseDate(state.displayRows[i]['查询日期']);
+        if (d) return d;
+      }
+      return null;
+    }
+
+    // ===== Excel parsing =====
+    function handleFile(file) {
+      if (!file) return;
+      var name = (file.name || '').toLowerCase();
+      if (!/\.(xlsx|xls)$/.test(name)) {
+        setStatus('请上传 Excel 文件 (.xlsx / .xls)', 'danger');
+        return;
+      }
+      setStatus('正在解析 ' + file.name + ' …', 'warn');
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        try {
+          var data = new Uint8Array(e.target.result);
+          var workbook = XLSX.read(data, { type: 'array', cellDates: false });
+          var firstSheet = workbook.SheetNames[0];
+          if (!firstSheet) {
+            setStatus('Excel 中没有可读取的工作表', 'danger');
+            return;
+          }
+          var sheet = workbook.Sheets[firstSheet];
+          var rows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: true });
+          if (!rows.length) {
+            setStatus('Excel 中没有数据行', 'warn');
+            return;
+          }
+          // Validate required headers
+          var sample = rows[0];
+          var headers = Object.keys(sample);
+          var missing = REQUIRED_FIELDS.filter(function (h) { return headers.indexOf(h) === -1; });
+          if (missing.length) {
+            setStatus('Excel 缺少必要列：' + missing.join('、') + '。请检查表头后重新上传。', 'danger');
+            return;
+          }
+          // Clean rows: keep only required+display fields, coerce failures to ''
+          var cleaned = rows.map(function (r) {
+            var obj = {};
+            DISPLAY_FIELDS.forEach(function (f) {
+              var v = r[f];
+              obj[f] = (v === undefined || v === null) ? '' : v;
+            });
+            // Add 序号 from row order
+            return obj;
+          });
+          state.rawRows = cleaned;
+          initLeaders(cleaned);
+          setStatus('解析成功：共 ' + cleaned.length + ' 行数据，请选择直属领导并切换生成类型。', 'success');
+          elFilterCard.style.display = '';
+          elTableCard.style.display = '';
+          elOutputCard.style.display = '';
+          renderLeaderOptions();
+          applyFilter();
+        } catch (err) {
+          console.error(err);
+          setStatus('解析失败：' + (err && err.message ? err.message : err), 'danger');
+        }
+      };
+      reader.onerror = function () {
+        setStatus('读取文件失败，请重试', 'danger');
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function initLeaders(rows) {
+      var set = {};
+      rows.forEach(function (r) {
+        var l = safeText(r['直属领导']);
+        if (l) set[l] = true;
+      });
+      var list = Object.keys(set).sort(function (a, b) { return a.localeCompare(b, 'zh-Hans-CN'); });
+      state.leaders = list;
+      state.selectedLeaders = list.slice(); // default: all selected
+    }
+
+    function renderLeaderOptions() {
+      elLeaderSel.innerHTML = '';
+      state.leaders.forEach(function (l) {
+        var opt = document.createElement('option');
+        opt.value = l;
+        opt.textContent = l;
+        if (state.selectedLeaders.indexOf(l) !== -1) opt.selected = true;
+        elLeaderSel.appendChild(opt);
+      });
+    }
+
+    function getSelectedLeaders() {
+      var arr = [];
+      for (var i = 0; i < elLeaderSel.options.length; i++) {
+        var o = elLeaderSel.options[i];
+        if (o.selected) arr.push(o.value);
+      }
+      return arr;
+    }
+
+    function applyFilter() {
+      var sel = getSelectedLeaders();
+      state.selectedLeaders = sel;
+      state.displayRows = state.rawRows.filter(function (r) {
+        var l = safeText(r['直属领导']);
+        return sel.indexOf(l) !== -1;
+      });
+      renderTable();
+      generateOutput();
+    }
+
+    function renderTable() {
+      elTbody.innerHTML = '';
+      var frag = document.createDocumentFragment();
+      state.displayRows.forEach(function (r, i) {
+        var tr = document.createElement('tr');
+        var cells = [
+          String(i + 1),
+          safeText(r['姓名/本部门']),
+          safeText(r['直属领导']),
+          r['当月报工(件数)'] === '' ? '' : safeText(r['当月报工(件数)']),
+          r['当天报工(件数)'] === '' ? '' : safeText(r['当天报工(件数)']),
+          safeText(r['查询日期'])
+        ];
+        cells.forEach(function (c) {
+          var td = document.createElement('td');
+          td.textContent = c;
+          tr.appendChild(td);
+        });
+        frag.appendChild(tr);
+      });
+      elTbody.appendChild(frag);
+      elRowCount.textContent = '共 ' + state.displayRows.length + ' / ' + state.rawRows.length + ' 行';
+    }
+
+    // ===== Output generation =====
+    function generateOutput() {
+      elOutputHint.textContent = '';
+      if (!state.displayRows.length) {
+        elOutputText.value = '';
+        elCopyBtn.disabled = true;
+        elOutputHint.textContent = '当前筛选下没有数据。';
+        updateDateHint();
+        return;
+      }
+
+      if (state.type === 'monthly') {
+        var monthly = buildMonthlyText();
+        elOutputText.value = monthly.text;
+        elCopyBtn.disabled = !monthly.text;
+        elOutputHint.textContent = monthly.hint || '';
+      } else {
+        var today = buildTodayText();
+        elOutputText.value = today.text;
+        elCopyBtn.disabled = !today.text;
+        elOutputHint.textContent = today.hint || '';
+      }
+      updateDateHint();
+    }
+
+    function buildMonthlyText() {
+      var date = getFirstDate();
+      var monthLabel;
+      if (date) {
+        monthLabel = date.month + '月份';
+      } else {
+        var now = new Date();
+        monthLabel = (now.getMonth() + 1) + '月份';
+      }
+      var rows = state.displayRows;
+      var zeroList = [];
+      var reportList = [];
+      rows.forEach(function (r) {
+        var name = safeText(r['姓名/本部门']);
+        if (!name) return;
+        var n = toNumber(r['当月报工(件数)']);
+        if (n === 0) {
+          zeroList.push(name);
+        } else {
+          reportList.push(name + '已报工' + n + '次');
+        }
+      });
+      var head = monthLabel + '报工情况: ';
+      var text = '';
+      if (zeroList.length === 0) {
+        // All > 0
+        text = head + reportList.join(', ') + '。';
+        return { text: text, hint: '已生成「' + monthLabel + '报工情况」' };
+      } else if (reportList.length === 0) {
+        // All 0
+        text = head + zeroList.join('、') + '当月未报工，麻烦提醒一下。';
+        return { text: text, hint: '已生成「' + monthLabel + '报工情况」' };
+      } else {
+        // Mixed
+        text = head + zeroList.join('、') + '当月未报工，麻烦提醒一下; ' + reportList.join(', ') + '。';
+        return { text: text, hint: '已生成「' + monthLabel + '报工情况」' };
+      }
+    }
+
+    function buildTodayText() {
+      var date = getFirstDate();
+      var dateLabel;
+      if (date) {
+        dateLabel = date.month + '月' + date.day + '日';
+      } else {
+        var now = new Date();
+        dateLabel = (now.getMonth() + 1) + '月' + now.getDate() + '日';
+      }
+      var rows = state.displayRows;
+      var zeroList = [];
+      rows.forEach(function (r) {
+        var n = toNumber(r['当天报工(件数)']);
+        var name = safeText(r['姓名/本部门']);
+        if (!name) return;
+        if (n === 0) zeroList.push(name);
+      });
+      if (zeroList.length === 0) {
+        return {
+          text: '',
+          hint: '当前筛选下无人今日未报工'
+        };
+      }
+      var head = dateLabel + '报工情况: ';
+      var text = head + zeroList.join('、') + '今日未报工，麻烦提醒一下。';
+      return { text: text, hint: '已生成「' + dateLabel + '未报工提醒」' };
+    }
+
+    function updateDateHint() {
+      var d = getFirstDate();
+      if (d) {
+        elDateHint.textContent = '已从「查询日期」解析：' + d.year + '年' + d.month + '月' + d.day + '日';
+      } else {
+        elDateHint.textContent = '未能从「查询日期」解析到有效日期，将使用当前日期/月份。';
+      }
+    }
+
+    // ===== Copy =====
+    function copyText(text) {
+      return new Promise(function (resolve) {
+        var done = function (ok) { resolve(ok); };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () { done(true); }, function () {
+            done(fallbackCopy(text));
+          });
+        } else {
+          done(fallbackCopy(text));
+        }
+      });
+    }
+
+    function fallbackCopy(text) {
+      try {
+        elOutputText.removeAttribute('readonly');
+        elOutputText.focus();
+        elOutputText.select();
+        elOutputText.setSelectionRange(0, text.length);
+        var ok = document.execCommand('copy');
+        elOutputText.setAttribute('readonly', '');
+        window.getSelection && window.getSelection().removeAllRanges();
+        return !!ok;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function flashCopyButton(ok) {
+      elCopyBtn.textContent = ok ? '已复制' : '复制失败，请手动复制';
+      elCopyBtn.disabled = !ok ? false : true; // keep enabled if failed
+      setTimeout(function () {
+        elCopyBtn.textContent = '一键复制';
+        elCopyBtn.disabled = !elOutputText.value;
+      }, 2000);
+    }
+
+    // ===== Event binding =====
+    elFileInput.addEventListener('change', function (e) {
+      var f = e.target.files && e.target.files[0];
+      if (f) handleFile(f);
+    });
+
+    ['dragenter', 'dragover'].forEach(function (evt) {
+      elUploadArea.addEventListener(evt, function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        elUploadArea.classList.add('dragover');
+      });
+    });
+    ['dragleave', 'drop'].forEach(function (evt) {
+      elUploadArea.addEventListener(evt, function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        elUploadArea.classList.remove('dragover');
+      });
+    });
+    elUploadArea.addEventListener('drop', function (e) {
+      var dt = e.dataTransfer;
+      if (dt && dt.files && dt.files[0]) handleFile(dt.files[0]);
+    });
+
+    elLeaderSel.addEventListener('change', function () {
+      applyFilter();
+    });
+
+    elSelectAll.addEventListener('click', function () {
+      for (var i = 0; i < elLeaderSel.options.length; i++) {
+        elLeaderSel.options[i].selected = true;
+      }
+      applyFilter();
+    });
+
+    elClearAll.addEventListener('click', function () {
+      for (var i = 0; i < elLeaderSel.options.length; i++) {
+        elLeaderSel.options[i].selected = false;
+      }
+      applyFilter();
+    });
+
+    elTypeTabs.addEventListener('click', function (e) {
+      var btn = e.target.closest('button[data-type]');
+      if (!btn) return;
+      var btns = elTypeTabs.querySelectorAll('button');
+      btns.forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      state.type = btn.getAttribute('data-type');
+      generateOutput();
+    });
+
+    elCopyBtn.addEventListener('click', function () {
+      var text = elOutputText.value;
+      if (!text) return;
+      copyText(text).then(function (ok) {
+        flashCopyButton(ok);
+        if (!ok) {
+          setStatus('复制失败，请手动选中并复制文案', 'warn');
+        } else {
+          setStatus('已复制到剪贴板', 'success');
+        }
+      });
+    });
+  })();
+  </script>
+</body>
+</html>
